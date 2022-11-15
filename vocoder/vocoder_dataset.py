@@ -23,23 +23,23 @@ class VocoderDataset(Dataset):
     
     def __getitem__(self, index):  
         mel_path, wav_path = self.samples_fpaths[index]
-        
+
         # Load the mel spectrogram and adjust its range to [-1, 1]
         mel = np.load(mel_path).T.astype(np.float32) / hp.mel_max_abs_value
-        
+
         # Load the wav
         wav = np.load(wav_path)
         if hp.apply_preemphasis:
             wav = audio.pre_emphasis(wav)
         wav = np.clip(wav, -1, 1)
-        
+
         # Fix for missing padding   # TODO: settle on whether this is any useful
         r_pad =  (len(wav) // hp.hop_length + 1) * hp.hop_length - len(wav)
         wav = np.pad(wav, (0, r_pad), mode='constant')
         assert len(wav) >= mel.shape[1] * hp.hop_length
         wav = wav[:mel.shape[1] * hp.hop_length]
         assert len(wav) % hp.hop_length == 0
-        
+
         # Quantize the wav
         if hp.voc_mode == 'RAW':
             if hp.mu_law:
@@ -48,7 +48,7 @@ class VocoderDataset(Dataset):
                 quant = audio.float_2_label(wav, bits=hp.bits)
         elif hp.voc_mode == 'MOL':
             quant = audio.float_2_label(wav, bits=16)
-            
+
         return mel.astype(np.float32), quant.astype(np.int64)
 
     def __len__(self):
